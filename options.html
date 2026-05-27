@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GitHub CI Badges — Options</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    padding: 2rem;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+  p { font-size: 0.85rem; color: #8b949e; margin-bottom: 1.25rem; line-height: 1.5; }
+  label { font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 0.4rem; }
+  input[type="text"] {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    font-size: 0.85rem;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+  }
+  input[type="text"]:focus { outline: none; border-color: #58a6ff; }
+  button {
+    margin-top: 1rem;
+    padding: 0.5rem 1.25rem;
+    background: #238636;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: #2ea043; }
+  .status {
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    min-height: 1.2em;
+  }
+  .status-ok { color: #3fb950; }
+  .status-err { color: #f85149; }
+</style>
+</head>
+<body>
+  <h1>GitHub CI Badges</h1>
+  <p>Enter a GitHub Personal Access Token with <code>repo</code> scope. You can reuse your Refined GitHub token.</p>
+  <label for="pat">Personal Access Token</label>
+  <input type="text" id="pat" placeholder="ghp_...">
+  <button id="save">Save</button>
+  <div class="status" id="status"></div>
+  <script src="options.js"></script>
+</body>
+</html>

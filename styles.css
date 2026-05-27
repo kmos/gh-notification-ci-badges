@@ -1,0 +1,63 @@
+.gh-ci-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1em 0.5em;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  vertical-align: middle;
+  line-height: 1;
+  margin-left: 0.4rem;
+  height: 18px;
+  align-self: center;
+}
+
+.gh-ci-badge svg {
+  width: 10px;
+  height: 10px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.gh-ci-pass {
+  background: rgba(35, 134, 54, 0.15);
+  color: #3fb950;
+}
+
+.gh-ci-fail {
+  background: rgba(218, 54, 52, 0.15);
+  color: #f85149;
+}
+
+.gh-ci-pending {
+  background: rgba(158, 106, 3, 0.15);
+  color: #d29922;
+}
+
+.gh-ci-none {
+  background: rgba(139, 148, 158, 0.15);
+  color: #8b949e;
+}
+
+.gh-merge-conflict {
+  background: rgba(218, 54, 52, 0.15);
+  color: #f85149;
+}
+
+.gh-ci-loading {
+  background: rgba(139, 148, 158, 0.15);
+  color: #8b949e;
+}
+
+@keyframes gh-ci-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.gh-ci-loading svg {
+  animation: gh-ci-pulse 1.2s ease-in-out infinite;
+}

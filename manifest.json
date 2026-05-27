@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub Notification CI Badges",
+  "version": "1.0.0",
+  "description": "Adds inline CI status badges to PR notifications on GitHub",
+  "permissions": ["storage"],
+  "host_permissions": ["https://api.github.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/notifications*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "icons": {}
+}
