@@ -61,6 +61,7 @@ function aggregateChecks(prData) {
 
   const active = total - skipped;
   if (active === 0) return { status: "none", detail: "", mergeable };
+  if (failure > 0 && pending > 0) return { status: "unstable", detail: `${failure}/${active} FAIL (${pending} RUNNING)`, mergeable };
   if (failure > 0) return { status: "fail", detail: `${failure}/${active} FAIL`, mergeable };
   if (pending > 0) return { status: "pending", detail: `${active - pending}/${active} RUNNING`, mergeable };
   return { status: "pass", detail: "CI PASS", mergeable };

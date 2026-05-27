@@ -38,6 +38,11 @@
   color: #d29922;
 }
 
+.gh-ci-unstable {
+  background: rgba(210, 120, 20, 0.15);
+  color: #e08620;
+}
+
 .gh-ci-none {
   background: rgba(139, 148, 158, 0.15);
   color: #8b949e;

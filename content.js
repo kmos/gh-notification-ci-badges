@@ -28,6 +28,9 @@ function makeCiBadge(status, detail) {
   if (status === "pass") {
     span.classList.add("gh-ci-pass");
     span.innerHTML = CHECK_SVG + "CI PASS";
+  } else if (status === "unstable") {
+    span.classList.add("gh-ci-unstable");
+    span.innerHTML = X_SVG + detail;
   } else if (status === "fail") {
     span.classList.add("gh-ci-fail");
     span.innerHTML = X_SVG + detail;
