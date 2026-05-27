@@ -1,39 +1,13 @@
-const CACHE_KEY = "ciCache";
-const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-
 async function getToken() {
   const data = await chrome.storage.local.get("githubPAT");
   return data.githubPAT || null;
 }
 
-async function loadCache() {
-  const data = await chrome.storage.local.get(CACHE_KEY);
-  return data[CACHE_KEY] || {};
-}
-
-async function saveCache(cache) {
-  const now = Date.now();
-  const pruned = {};
-  for (const [sha, entry] of Object.entries(cache)) {
-    if (now - entry.ts < CACHE_MAX_AGE_MS) {
-      pruned[sha] = entry;
-    }
-  }
-  await chrome.storage.local.set({ [CACHE_KEY]: pruned });
-}
-
-function buildShaQuery(prs) {
-  const fragments = prs.map((pr, i) =>
-    `pr${i}: repository(owner: "${pr.owner}", name: "${pr.repo}") { pullRequest(number: ${pr.number}) { headRefOid mergeable } }`
-  );
-  return `query { ${fragments.join("\n")} }`;
-}
-
-function buildChecksQuery(prs, shas) {
+function buildQuery(prs) {
   const fragments = prs.map((pr, i) =>
     `pr${i}: repository(owner: "${pr.owner}", name: "${pr.repo}") {
       pullRequest(number: ${pr.number}) {
-        headRefOid
+        mergeable
         commits(last: 1) {
           nodes {
             commit {
@@ -57,13 +31,14 @@ function buildChecksQuery(prs, shas) {
 }
 
 function aggregateChecks(prData) {
-  if (!prData || !prData.pullRequest) return null;
-  const sha = prData.pullRequest.headRefOid;
-  const commits = prData.pullRequest.commits?.nodes;
-  if (!commits || commits.length === 0) return { sha, status: "none", detail: "" };
+  if (!prData?.pullRequest) return { status: "none", detail: "", mergeable: "UNKNOWN" };
+  const pr = prData.pullRequest;
+  const mergeable = pr.mergeable || "UNKNOWN";
+  const commits = pr.commits?.nodes;
+  if (!commits || commits.length === 0) return { status: "none", detail: "", mergeable };
 
   const rollup = commits[0].commit.statusCheckRollup;
-  if (!rollup) return { sha, status: "none", detail: "" };
+  if (!rollup) return { status: "none", detail: "", mergeable };
 
   const contexts = rollup.contexts?.nodes || [];
   let total = 0, success = 0, failure = 0, pending = 0, skipped = 0;
@@ -85,83 +60,36 @@ function aggregateChecks(prData) {
   }
 
   const active = total - skipped;
-  if (active === 0) return { sha, status: "none", detail: "" };
-  if (failure > 0) return { sha, status: "fail", detail: `${failure}/${active} FAIL` };
-  if (pending > 0) return { sha, status: "pending", detail: `${active - pending}/${active} RUNNING` };
-  return { sha, status: "pass", detail: "CI PASS" };
+  if (active === 0) return { status: "none", detail: "", mergeable };
+  if (failure > 0) return { status: "fail", detail: `${failure}/${active} FAIL`, mergeable };
+  if (pending > 0) return { status: "pending", detail: `${active - pending}/${active} RUNNING`, mergeable };
+  return { status: "pass", detail: "CI PASS", mergeable };
 }
 
-async function graphqlFetch(token, query) {
+async function fetchBatch(prs) {
+  const token = await getToken();
+  if (!token) return prs.map(() => ({ status: "none", detail: "", mergeable: "UNKNOWN" }));
+
   const resp = await fetch("https://api.github.com/graphql", {
     method: "POST",
     headers: {
       Authorization: `bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query: buildQuery(prs) }),
   });
+
   if (!resp.ok) {
-    const text = await resp.text();
-    console.error("GraphQL error:", resp.status, text);
-    return null;
+    console.error("GraphQL error:", resp.status, await resp.text());
+    return prs.map(() => ({ status: "none", detail: "", mergeable: "UNKNOWN" }));
   }
+
   const json = await resp.json();
   if (json.errors) console.error("GraphQL errors:", json.errors);
-  return json.data;
-}
+  const data = json.data;
+  if (!data) return prs.map(() => ({ status: "none", detail: "", mergeable: "UNKNOWN" }));
 
-async function fetchBatch(prs) {
-  const token = await getToken();
-  if (!token) return prs.map(() => ({ status: "none", detail: "", error: "No token configured" }));
-
-  const cache = await loadCache();
-  const results = new Array(prs.length).fill(null);
-
-  // Step 1: fetch head SHAs for all PRs (lightweight query)
-  const shaData = await graphqlFetch(token, buildShaQuery(prs));
-  if (!shaData) return prs.map(() => ({ status: "none", detail: "" }));
-
-  const shas = [];
-  const mergeables = [];
-  const needChecks = [];
-  for (let i = 0; i < prs.length; i++) {
-    const pr = shaData[`pr${i}`]?.pullRequest;
-    const sha = pr?.headRefOid;
-    shas[i] = sha;
-    mergeables[i] = pr?.mergeable || "UNKNOWN";
-    if (sha && cache[sha]) {
-      results[i] = { ...cache[sha].result, mergeable: mergeables[i] };
-    } else {
-      needChecks.push(i);
-    }
-  }
-
-  // Step 2: fetch full check-runs only for cache misses
-  if (needChecks.length > 0) {
-    const checksData = await graphqlFetch(
-      token,
-      buildChecksQuery(needChecks.map((i) => prs[i]))
-    );
-
-    for (let j = 0; j < needChecks.length; j++) {
-      const i = needChecks[j];
-      const prData = checksData?.[`pr${j}`];
-      const agg = aggregateChecks(prData);
-      if (agg) {
-        const result = { status: agg.status, detail: agg.detail, mergeable: mergeables[i] };
-        results[i] = result;
-        if (agg.status === "pass") {
-          cache[agg.sha] = { result, ts: Date.now() };
-        }
-      } else {
-        results[i] = { status: "none", detail: "" };
-      }
-    }
-
-    await saveCache(cache);
-  }
-
-  return results;
+  return prs.map((_, i) => aggregateChecks(data[`pr${i}`]));
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
